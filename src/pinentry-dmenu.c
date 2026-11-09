@@ -4,17 +4,16 @@
 #include <X11/Xresource.h>
 #include <X11/Xutil.h>
 #include <ctype.h>
-#include <gpg-error.h>
 #include <errno.h>
-#include <limits.h>
+#include <gpg-error.h>
 #include <libconfig.h>
+#include <limits.h>
 #include <locale.h>
-#include <poll.h>
 #include <poll.h>
 #include <pwd.h>
 #include <signal.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -88,6 +87,8 @@ static int quality_hint_line_count;
 static int quality_value;
 static int repeat_error_visible;
 static int buttons[3], button_count;
+static char* button_labels[3];
+static unsigned char button_accelerators[3];
 static Atom wm_protocols, wm_delete;
 static Atom paste_selection;
 
@@ -186,23 +187,45 @@ static char** wrap_description(const char* text, unsigned int width,
   return lines;
 }
 
-static const char* button_label(int button) {
+static const char* button_source(int button) {
   switch (button) {
     case Ok:
-      return pinentry_info->ok ? pinentry_info->ok
-                               : (pinentry_info->default_ok
-                                      ? pinentry_info->default_ok
-                                      : "OK");
+      return pinentry_info->ok
+               ? pinentry_info->ok
+               : (pinentry_info->default_ok ? pinentry_info->default_ok : "OK");
     case NotOk:
       return pinentry_info->notok ? pinentry_info->notok : "No";
     case Cancel:
       return pinentry_info->cancel
-                 ? pinentry_info->cancel
-                 : (pinentry_info->default_cancel
-                        ? pinentry_info->default_cancel
-                        : "Cancel");
+               ? pinentry_info->cancel
+               : (pinentry_info->default_cancel ? pinentry_info->default_cancel
+                                                : "Cancel");
   }
   return "";
+}
+
+static char* normalize_button_label(const char* source,
+                                    unsigned char* accelerator) {
+  size_t i = 0, j = 0, length = strlen(source);
+  char* label = ecalloc(length + 1, sizeof(*label));
+
+  *accelerator = 0;
+  while (i < length) {
+    if (source[i] != '_') {
+      label[j++] = source[i++];
+    } else if (i + 1 < length && source[i + 1] == '_') {
+      label[j++] = '_';
+      i += 2;
+    } else if (i + 1 < length) {
+      if (!*accelerator && (unsigned char)source[i + 1] < 0x80)
+        *accelerator = (unsigned char)source[i + 1];
+      i++;
+    } else {
+      label[j++] = source[i++];
+    }
+  }
+  label[j] = '\0';
+  return label;
 }
 
 static int button_configured(int button) {
@@ -223,12 +246,34 @@ static void setup_buttons(void) {
   int i;
 
   button_count = 0;
+  memset(button_labels, 0, sizeof(button_labels));
+  memset(button_accelerators, 0, sizeof(button_accelerators));
   if (winmode != WinConfirm) actions[1] = Cancel;
   for (i = 0; i < action_count; i++) {
     if (pinentry_info->one_button && actions[i] != Ok) continue;
-    if (button_configured(actions[i])) buttons[button_count++] = actions[i];
+    if (button_configured(actions[i])) {
+      buttons[button_count] = actions[i];
+      button_labels[button_count] = normalize_button_label(
+        button_source(actions[i]), &button_accelerators[button_count]);
+      button_count++;
+    }
   }
   sel = button_count ? buttons[0] : Ok;
+}
+
+static int select_button_accelerator(XKeyEvent* ev, KeySym key) {
+  int i;
+
+  if (!(ev->state & Mod1Mask) || key > UCHAR_MAX) return 0;
+  for (i = 0; i < button_count; i++) {
+    if (button_accelerators[i] &&
+        tolower(button_accelerators[i]) == tolower((unsigned char)key)) {
+      sel = buttons[i];
+      if (sel == Cancel) pinentry_info->canceled = 1;
+      return 1;
+    }
+  }
+  return 0;
 }
 
 static int xresource_configured(const XResPref* resource) {
@@ -265,15 +310,13 @@ static void load_xresources(void) {
     const XResPref* resource = &resources[i];
     if (xresource_configured(resource) ||
         !XrmGetResource(database, resource->name, NULL, &type, &value) ||
-        !value.addr || !type ||
-        strncmp(type, "String", sizeof("String")))
+        !value.addr || !type || strncmp(type, "String", sizeof("String")))
       continue;
     if (resource->type == STRING) {
       *(const char**)resource->dst = strdup(value.addr);
     } else {
       long parsed = strtol(value.addr, NULL, 10);
-      if (parsed > 0 && parsed <= 1024)
-        *(unsigned int*)resource->dst = parsed;
+      if (parsed > 0 && parsed <= 1024) *(unsigned int*)resource->dst = parsed;
     }
   }
   XrmDestroyDatabase(database);
@@ -427,10 +470,10 @@ static void drawwin(void) {
   int quality_first_row = 1 + button_count + error_rows;
   int hint_first_row = quality_first_row + quality_row;
   int description_first_row = hint_first_row + quality_hint_line_count;
-  int error_count = repeat_error_visible ? repeat_error_line_count
-                                         : error_line_count;
-  char** visible_errors = repeat_error_visible ? repeat_error_lines
-                                               : error_lines;
+  int error_count =
+    repeat_error_visible ? repeat_error_line_count : error_line_count;
+  char** visible_errors =
+    repeat_error_visible ? repeat_error_lines : error_lines;
   char numbers[32];
   size_t asterlen = strlen(asterisk);
   int leftinput;
@@ -498,11 +541,12 @@ static void drawwin(void) {
   }
 
   for (i = 0; i < button_count; i++) {
-    drawitem(button_label(buttons[i]), sel == buttons[i], 0, bh * (i + 1), mw);
+    drawitem(button_labels[i], sel == buttons[i], 0, bh * (i + 1), mw);
   }
   if (button_count) {
     drw_setscheme(drw, scheme[SchemeNormal]);
-    drw_text(drw, mw - number_width, 0, number_width, bh, lrpad / 2, numbers, 0);
+    drw_text(drw, mw - number_width, 0, number_width, bh, lrpad / 2, numbers,
+             0);
   }
 
   for (row = 1 + button_count; row <= button_count + error_rows; row++) {
@@ -530,11 +574,10 @@ static void drawwin(void) {
     bar_y = bh * quality_first_row + (bh - bar_h) / 2;
     drw_setscheme(drw, scheme[SchemeNormal]);
     drw_rect(drw, bar_x, bar_y, bar_w, bar_h, 1, 1);
-    fill_w = quality_value < 0
-                 ? bar_w
-                 : (int)((long)bar_w * quality_value / 100);
-    drw_setscheme(drw, quality_value < 0 ? scheme[SchemeError]
-                                         : scheme[SchemeSelect]);
+    fill_w =
+      quality_value < 0 ? bar_w : (int)((long)bar_w * quality_value / 100);
+    drw_setscheme(
+      drw, quality_value < 0 ? scheme[SchemeError] : scheme[SchemeSelect]);
     drw_rect(drw, bar_x, bar_y, fill_w, bar_h, 1, 1);
   }
 
@@ -553,9 +596,9 @@ static void drawwin(void) {
       drw_rect(drw, 0, bh * (description_first_row + row - 1), mw, bh, 1, 1);
     }
     for (i = 0; i < description_line_count; i++) {
-      row = description_first_row + description_rows - description_line_count + i;
-      drw_text(drw, 0, bh * row, mw, bh, lrpad / 2,
-               description_lines[i], 0);
+      row =
+        description_first_row + description_rows - description_line_count + i;
+      drw_text(drw, 0, bh * row, mw, bh, lrpad / 2, description_lines[i], 0);
     }
   }
 
@@ -646,22 +689,21 @@ static void setup(void) {
   setup_buttons();
   error_lines = wrap_description(pinentry_info->error, MAX(1, mw - lrpad),
                                  &error_line_count);
-  repeat_error_lines = wrap_description(pinentry_info->repeat_error_string,
-                                        MAX(1, mw - lrpad),
-                                        &repeat_error_line_count);
+  repeat_error_lines =
+    wrap_description(pinentry_info->repeat_error_string, MAX(1, mw - lrpad),
+                     &repeat_error_line_count);
   error_rows = MAX(error_line_count, repeat_error_line_count);
   if (pinentry_info->quality_bar && pinentry_info->quality_bar_tt) {
-    quality_hint_lines = wrap_description(pinentry_info->quality_bar_tt,
-                                          MAX(1, mw - lrpad),
-                                          &quality_hint_line_count);
+    quality_hint_lines =
+      wrap_description(pinentry_info->quality_bar_tt, MAX(1, mw - lrpad),
+                       &quality_hint_line_count);
   }
-  description_lines = wrap_description(pinentry_info->description,
-                                       MAX(1, mw - lrpad),
-                                       &description_line_count);
+  description_lines = wrap_description(
+    pinentry_info->description, MAX(1, mw - lrpad), &description_line_count);
   description_rows = MAX(lines, description_line_count);
-  mh = bh * (1 + button_count + error_rows +
-             (pinentry_info->quality_bar ? 1 : 0) + quality_hint_line_count +
-             description_rows);
+  mh =
+    bh * (1 + button_count + error_rows + (pinentry_info->quality_bar ? 1 : 0) +
+          quality_hint_line_count + description_rows);
   y = screeny + (screenh - mh) / menu_height_ratio;
 
   /* Create menu window */
@@ -720,6 +762,9 @@ static void cleanup(void) {
   free(quality_hint_lines);
   quality_hint_lines = NULL;
   quality_hint_line_count = 0;
+  for (i = 0; i < button_count; i++) free(button_labels[i]);
+  memset(button_labels, 0, sizeof(button_labels));
+  button_count = 0;
   free(scheme[SchemeDesc]);
   free(scheme[SchemeError]);
   free(scheme[SchemeSelect]);
@@ -731,6 +776,8 @@ static void cleanup(void) {
 }
 
 static int keypress_confirm(XKeyEvent* ev, KeySym ksym) {
+  if (select_button_accelerator(ev, ksym)) return 1;
+
   if (ev->state & ControlMask) {
     switch (ksym) {
       case XK_c:
@@ -792,6 +839,8 @@ static int keypress_confirm(XKeyEvent* ev, KeySym ksym) {
 
 static int keypress_pin(XKeyEvent* ev, KeySym ksym, char* buf, int len) {
   size_t old;
+
+  if (select_button_accelerator(ev, ksym)) return 1;
 
   if ((ev->state & ShiftMask) && (ksym == XK_v || ksym == XK_V)) {
     paste_selection = clip;
@@ -955,9 +1004,9 @@ static void paste(void) {
   unsigned char* newline;
   unsigned char* nul;
 
-  status = XGetWindowProperty(dpy, win, utf8, 0, request_length, True, utf8,
-                              &actual_type, &format, &nitems, &bytes_after,
-                              &property);
+  status =
+    XGetWindowProperty(dpy, win, utf8, 0, request_length, True, utf8,
+                       &actual_type, &format, &nitems, &bytes_after, &property);
   XDeleteProperty(dpy, win, utf8);
 
   if (status != Success || actual_type != utf8 || format != 8 ||
@@ -1212,8 +1261,7 @@ int main(int argc, char* argv[]) {
   disable_core_dumps();
 
   if (gnupghome && *gnupghome) {
-    path_length = snprintf(path, sizeof(path), "%s%s", gnupghome,
-                           CONFIG_FILE);
+    path_length = snprintf(path, sizeof(path), "%s%s", gnupghome, CONFIG_FILE);
   } else {
     /* Get the home dir even if the user used sudo or logged in as root */
     if (sudo_uid) {
@@ -1237,8 +1285,8 @@ int main(int argc, char* argv[]) {
       fputs("HOME is unset; cannot locate pinentry config.\n", stderr);
       return EXIT_FAILURE;
     }
-    path_length = snprintf(path, sizeof(path), "%s%s%s", home, CONFIG_DIR,
-                           CONFIG_FILE);
+    path_length =
+      snprintf(path, sizeof(path), "%s%s%s", home, CONFIG_DIR, CONFIG_FILE);
   }
   if (path_length < 0 || (size_t)path_length >= sizeof(path)) {
     fputs("Pinentry config path is too long.\n", stderr);

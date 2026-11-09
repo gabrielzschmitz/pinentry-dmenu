@@ -166,10 +166,11 @@ left-click activates them, middle-click pastes selection, and right-click
 cancels. `SETKEYINFO`, `GETINFO`, and `CLEARPASSPHRASE` remain handled by
 bundled pinentry core.
 
-Run `cd src && ./test 6` for custom confirmation buttons, `./test 7` for a
-one-button message, `./test 7` for an error prompt, `./test 9` for timeout, or
-`./test 10` for repeated-entry validation. `./test 11` checks empty cache-clear
-arguments.
+Run `cd src && ./test 4` or `./test 5` for multiline descriptions; `./test 6`
+for custom confirmation buttons; `./test 7` for a one-button message;
+`./test 8` for an error; `./test 9` for timeout; `./test 10` for repeated
+entry; `./test 11` for empty cache-clear arguments; or `./test 12` for escaped
+button-label underscores.
 
 ## License
 

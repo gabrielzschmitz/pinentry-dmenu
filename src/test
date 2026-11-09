@@ -70,9 +70,9 @@ ASSUAN
     ./pinentry-dmenu << 'ASSUAN'
 SETTITLE Confirmation
 SETDESC Choose an action
-SETOK Accept
-SETNOTOK Reject
-SETCANCEL Cancel
+SETOK _OK
+SETNOTOK _Reject
+SETCANCEL _Cancel
 CONFIRM
 BYE
 ASSUAN
@@ -81,7 +81,7 @@ ASSUAN
     ./pinentry-dmenu << 'ASSUAN'
 SETTITLE Message
 SETDESC This is a one-button message
-SETOK Dismiss
+SETOK _Dismiss
 MESSAGE
 BYE
 ASSUAN
@@ -119,6 +119,16 @@ ASSUAN
   11)
     ./pinentry-dmenu << 'ASSUAN'
 CLEARPASSPHRASE
+BYE
+    ASSUAN
+    ;;
+  12)
+    ./pinentry-dmenu << 'ASSUAN'
+SETTITLE Escaped labels
+SETDESC Doubled underscores display literally
+SETOK __OK
+SETCANCEL __Cancel
+CONFIRM
 BYE
 ASSUAN
     ;;
