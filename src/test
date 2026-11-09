@@ -1,0 +1,44 @@
+#!/bin/sh
+
+case "${1:-}" in
+  1)
+    printf 'SETTITLE title\nSETPROMPT prompt\nSETDESC PROMPT\nGETPIN\nBYE\n' |
+      ./pinentry-dmenu
+    ;;
+  2)
+    printf 'SETTITLE title\nSETPROMPT confirm\nSETDESC CONFIRM\nconfirm\nBYE\n' |
+      ./pinentry-dmenu
+    ;;
+  3)
+    printf 'SETTITLE title\nSETPROMPT prompt\nSETDESC REPEAT\nSETREPEAT repeat\nGETPIN\nBYE\n' |
+      ./pinentry-dmenu
+    ;;
+  4)
+    printf 'SETTITLE title\nSETPROMPT prompt\nSETDESC First dmenu-style description line%%0ASecond description line%%0AThird description line%%0AFourth description line%%0AFifth description line\nGETPIN\nBYE\n' |
+      ./pinentry-dmenu
+    ;;
+  5)
+    printf 'SETTITLE Confirmation\nSETDESC Choose an action\nSETOK Accept\nSETNOTOK Reject\nSETCANCEL Cancel\nCONFIRM\nBYE\n' |
+      ./pinentry-dmenu
+    ;;
+  6)
+    printf 'SETTITLE Message\nSETDESC This is a one-button message\nSETOK Dismiss\nMESSAGE\nBYE\n' |
+      ./pinentry-dmenu
+    ;;
+  7)
+    printf 'SETTITLE Error test\nSETERROR Example error from GPG\nSETDESC Enter a test PIN\nGETPIN\nBYE\n' |
+      ./pinentry-dmenu
+    ;;
+  8)
+    printf 'SETTITLE Timeout test\nSETPROMPT prompt\nSETDESC This request expires automatically\nSETTIMEOUT 3\nGETPIN\nBYE\n' |
+      ./pinentry-dmenu
+    ;;
+  9)
+    printf 'SETTITLE Repeat test\nSETPROMPT prompt\nSETDESC Enter same PIN twice\nSETREPEAT Repeat PIN\nSETREPEATERROR PINs did not match\nGETPIN\nBYE\n' |
+      ./pinentry-dmenu
+    ;;
+  *)
+    printf 'SETTITLE title\nSETPROMPT prompt\nSETDESC PROMPT\nGETPIN\nSETPROMPT confirm\nSETDESC CONFIRM\nconfirm\nSETPROMPT repeat\nSETDESC REPEAT\nSETREPEAT\nGETPIN\nBYE\n' |
+      ./pinentry-dmenu
+    ;;
+esac
