@@ -1,12 +1,13 @@
 #!/bin/sh
 # Manually exercise pinentry-dmenu through its Assuan input protocol.
-# Requires a built ./pinentry-dmenu. Modes 1-10 also require an X display;
+# Requires a built ./pinentry-dmenu. Modes 1-10 and 12 require an X display;
 # mode 11 tests protocol handling without opening the UI.
 #
 # Usage: ./test [MODE]
 # Modes: 1 basic PIN, 2 confirm, 3 repeat PIN, 4-5 multiline descriptions,
 #        6 labeled confirmation, 7 message, 8 error, 9 timeout, 10 repeat error,
-#        11 empty CLEARPASSPHRASE. Missing or unknown MODE runs full flow.
+#        11 empty CLEARPASSPHRASE, 12 escaped button labels. Unknown MODE runs
+#        full flow.
 
 case "${1:-}" in
   1)
@@ -120,7 +121,7 @@ ASSUAN
     ./pinentry-dmenu << 'ASSUAN'
 CLEARPASSPHRASE
 BYE
-    ASSUAN
+ASSUAN
     ;;
   12)
     ./pinentry-dmenu << 'ASSUAN'
