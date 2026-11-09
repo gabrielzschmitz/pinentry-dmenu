@@ -21,6 +21,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
+#include <limits.h>
 
 #include <assuan.h>
 
@@ -980,12 +981,22 @@ cmd_getpin (assuan_context_t ctx, char *line)
       if (password)
 	/* There is a cached password.  Try it.  */
 	{
-	  int len = strlen(password) + 1;
-	  if (len > pinentry.pin_len)
-	    len = pinentry.pin_len;
+          size_t password_len = strlen (password);
 
-	  memcpy (pinentry.pin, password, len);
-	  pinentry.pin[len] = '\0';
+          if (password_len >= INT_MAX)
+            {
+              secmem_free (password);
+              return gpg_error (GPG_ERR_TOO_LARGE);
+            }
+          if (password_len + 1 > (size_t)pinentry.pin_len
+              && !pinentry_setbufferlen (&pinentry,
+                                         (int)password_len + 1))
+            {
+              secmem_free (password);
+              return gpg_error (GPG_ERR_ENOMEM);
+            }
+
+          memcpy (pinentry.pin, password, password_len + 1);
 
 	  secmem_free (password);
 
@@ -995,7 +1006,7 @@ cmd_getpin (assuan_context_t ctx, char *line)
 
 	  /* Result is the length of the password not including the
 	     NUL terminator.  */
-	  result = len - 1;
+          result = (int)password_len;
 
 	  just_read_password_from_cache = 1;
 
