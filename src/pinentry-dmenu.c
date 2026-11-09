@@ -949,12 +949,14 @@ static int keypress(XKeyEvent* ev) {
       ret = keypress_pin(ev, ksym, buf, len);
     }
 
-    if (pinentry_info->canceled) return 1;
-    if (ret == 0) {
+    if (pinentry_info->canceled) {
+      ret = 1;
+    } else if (ret == 0) {
       drawwin();
     }
   }
 
+  secure_clear(buf, sizeof(buf));
   return ret;
 }
 
