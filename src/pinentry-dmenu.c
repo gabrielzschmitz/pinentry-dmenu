@@ -412,7 +412,7 @@ static void insert(const char* str, ssize_t n) {
   dest = n < 0 ? cursor - removed : cursor + added;
   memmove(pin + dest, pin + cursor, len - cursor + 1);
   if (added) memcpy(pin + cursor, str, added);
-  cursor = dest + added;
+  cursor = dest;
   pin[newlen] = '\0';
   if (newlen + 1 < (size_t)pin_len)
     secure_clear(pin + newlen + 1, (size_t)pin_len - newlen - 1);
