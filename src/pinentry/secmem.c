@@ -231,6 +231,11 @@ init_pool( size_t n)
 	log_info("can't mmap pool of %u bytes: %s - using malloc\n",
 			    (unsigned)poolsize, strerror(errno));
     else {
+#ifdef MADV_DONTDUMP
+        if (madvise(pool, poolsize, MADV_DONTDUMP) < 0)
+            log_info("can't exclude secure pool from core dumps: %s\n",
+                     strerror(errno));
+#endif
 	pool_is_mmapped = 1;
 	pool_okay = 1;
     }

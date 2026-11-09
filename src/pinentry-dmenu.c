@@ -18,6 +18,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/prctl.h>
+#include <sys/resource.h>
 #include <time.h>
 #include <unistd.h>
 #ifdef XINERAMA
@@ -1194,6 +1196,17 @@ static int cmdhandler(pinentry_t received_pinentry) {
   return pinentry_info->result;
 }
 
+static void disable_core_dumps(void) {
+  const struct rlimit no_core = {0, 0};
+
+  if (setrlimit(RLIMIT_CORE, &no_core) < 0) {
+    die("cannot disable core dumps: %s", strerror(errno));
+  }
+  if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) < 0) {
+    die("cannot disable process dumps: %s", strerror(errno));
+  }
+}
+
 pinentry_cmd_handler_t pinentry_cmd_handler = cmdhandler;
 
 int main(int argc, char* argv[]) {
@@ -1208,6 +1221,8 @@ int main(int argc, char* argv[]) {
   char* home = getenv("HOME");
   char* gnupghome = getenv("GNUPGHOME");
   config_t cfg;
+
+  disable_core_dumps();
 
   if (gnupghome && *gnupghome) {
     path_length = snprintf(path, sizeof(path), "%s%s", gnupghome,
