@@ -1166,6 +1166,8 @@ cmd_getinfo (assuan_context_t ctx, char *line)
 static gpg_error_t
 cmd_clear_passphrase (assuan_context_t ctx, char *line)
 {
+  size_t length;
+
   (void)ctx;
 
   if (! line)
@@ -1174,8 +1176,11 @@ cmd_clear_passphrase (assuan_context_t ctx, char *line)
   /* Remove leading and trailing white space.  */
   while (*line == ' ')
     line ++;
-  while (line[strlen (line) - 1] == ' ')
-    line[strlen (line) - 1] = 0;
+  length = strlen (line);
+  while (length && line[length - 1] == ' ')
+    line[--length] = 0;
+  if (!length)
+    return gpg_error (GPG_ERR_ASS_INV_VALUE);
 
   switch (password_cache_clear (line))
     {
