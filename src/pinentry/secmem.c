@@ -138,15 +138,8 @@ lock_pool( void *p, size_t n )
 	err = errno;
     cap_set_proc( cap_from_text("cap_ipc_lock+p") );
 
-    if( err ) {
-	if( errno != EPERM
-	  #ifdef EAGAIN  /* OpenBSD returns this */
-	    && errno != EAGAIN
-	  #endif
-	  )
-	    log_error("can't lock memory: %s\n", strerror(err));
-	show_warning = 1;
-    }
+    if (err)
+        log_fatal("can't lock secure memory: %s\n", strerror(err));
 
 #elif defined(HAVE_MLOCK)
     uid_t uid;
@@ -175,18 +168,11 @@ lock_pool( void *p, size_t n )
 	    log_fatal("failed to reset uid: %s\n", strerror(errno));
     }
 
-    if( err ) {
-	if( errno != EPERM
-#ifdef EAGAIN  /* OpenBSD returns this */
-	    && errno != EAGAIN
-#endif
-	  )
-	    log_error("can't lock memory: %s\n", strerror(err));
-	show_warning = 1;
-    }
+    if (err)
+        log_fatal("can't lock secure memory: %s\n", strerror(err));
 
 #else
-    log_info("Please note that you don't have secure memory on this system\n");
+    log_fatal("secure memory locking is unavailable on this system\n");
 #endif
 }
 
