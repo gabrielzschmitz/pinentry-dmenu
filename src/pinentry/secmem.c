@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <limits.h>
+#include <stdint.h>
 #include <stdarg.h>
 #include <unistd.h>
 #if defined(HAVE_MLOCK) || defined(HAVE_MMAP)
@@ -326,9 +328,13 @@ secmem_malloc( size_t size )
 	print_warn();
     }
 
-    /* blocks are always a multiple of 32 */
+    /* Blocks are always a multiple of 32.  Reject wrapped sizes. */
+    if (size > SIZE_MAX - sizeof(MEMBLOCK) - 31)
+        return NULL;
     size += sizeof(MEMBLOCK);
     size = ((size + 31) / 32) * 32;
+    if (size > UINT_MAX)
+        return NULL;
 
   retry:
     /* try to get it from the used blocks */
@@ -341,7 +347,7 @@ secmem_malloc( size_t size )
 	    goto leave;
 	}
     /* allocate a new block */
-    if( (poollen + size <= poolsize) ) {
+    if( poollen <= poolsize && size <= poolsize - poollen ) {
 	mb = (void*)((char*)pool + poollen);
 	poollen += size;
 	mb->size = size;
@@ -373,19 +379,26 @@ void *
 secmem_realloc( void *p, size_t newsize )
 {
     MEMBLOCK *mb;
-    size_t size;
+    size_t offset, capacity, copy_size;
     void *a;
 
     if (! p)
       return secmem_malloc(newsize);
 
     mb = (MEMBLOCK*)((char*)p - ((size_t) &((MEMBLOCK*)0)->u.aligned.c));
-    size = mb->size;
-    if( newsize < size )
+    offset = (size_t)&((MEMBLOCK*)0)->u.aligned.c;
+    if (mb->size < offset)
+        return NULL;
+    capacity = mb->size - offset;
+    if( newsize <= capacity )
 	return p; /* it is easier not to shrink the memory */
     a = secmem_malloc( newsize );
-    memcpy(a, p, size);
-    memset((char*)a+size, 0, newsize-size);
+    if (!a)
+        return NULL;
+    copy_size = capacity < newsize ? capacity : newsize;
+    memcpy(a, p, copy_size);
+    if (newsize > copy_size)
+        memset((char*)a + copy_size, 0, newsize - copy_size);
     secmem_free(p);
     return a;
 }

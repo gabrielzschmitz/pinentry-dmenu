@@ -14,6 +14,7 @@
 #include <pwd.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -96,6 +97,19 @@ pinentry_t pinentry_info;
 #include "config.h"
 
 static void update_quality(void);
+
+static void secure_clear(void* memory, size_t length) {
+  volatile unsigned char* p = memory;
+  while (length--) *p++ = 0;
+}
+
+static void input_allocation_failed(void) {
+  fputs("pinentry-dmenu: cannot grow secure input buffer\n", stderr);
+  pin = NULL;
+  pin_len = 0;
+  pinentry_info->canceled = 1;
+  pinentry_info->specific_err = gpg_error(GPG_ERR_ENOMEM);
+}
 
 static char** wrap_description(const char* text, unsigned int width,
                                int* line_count) {
@@ -351,40 +365,69 @@ static void setup_pin(char* pin_ptr, int len, int reset) {
 }
 
 static void insert(const char* str, ssize_t n) {
-  size_t len = strlen(pin);
+  size_t len, removed = 0, added = 0, newlen, required, capacity, dest;
 
-  // FIXME: Pinentry crashes when increasing the pin buffer the second time.
-  //        Other pinentry programs has a limited passwort field length.
-  if (len + n > pin_len - 1) {
+  if (!pin || pin_len <= 0 || n == 0) return;
+  len = strnlen(pin, (size_t)pin_len);
+  if (len == (size_t)pin_len || cursor > len) {
+    input_allocation_failed();
+    return;
+  }
+  if (n < 0) {
+    removed = (size_t)(-(n + 1)) + 1;
+    if (removed > cursor || removed > len) return;
+  } else {
+    if (!str) return;
+    added = (size_t)n;
+  }
+  if (added > SIZE_MAX - (len - removed) - 1) {
+    input_allocation_failed();
+    return;
+  }
+  newlen = len - removed + added;
+  required = newlen + 1;
+  if (required > INT_MAX) {
+    input_allocation_failed();
+    return;
+  }
+
+  if (required > (size_t)pin_len) {
+    capacity = (size_t)pin_len;
+    while (capacity < required) {
+      if (capacity > (size_t)INT_MAX / 2) {
+        capacity = required;
+        break;
+      }
+      capacity *= 2;
+    }
     if (repeat) {
-      pin_repeat_len = 2 * pin_repeat_len;
-      pin_repeat = secmem_realloc(pin_repeat, pin_repeat_len);
+      char* resized = secmem_realloc(pin, capacity);
+      if (!resized) {
+        secmem_free(pin_repeat);
+        pin_repeat = NULL;
+        pin_repeat_len = 0;
+        input_allocation_failed();
+        return;
+      }
+      pin_repeat = resized;
+      pin_repeat_len = (int)capacity;
       setup_pin(pin_repeat, pin_repeat_len, 0);
-      if (!pin_repeat) {
-        pin_len = 0;
-      }
     } else {
-      if (!pinentry_setbufferlen(pinentry_info, 2 * pinentry_info->pin_len)) {
-        pin_len = 0;
-      } else {
-        setup_pin(pinentry_info->pin, pinentry_info->pin_len, 0);
+      if (!pinentry_setbufferlen(pinentry_info, (int)capacity)) {
+        input_allocation_failed();
+        return;
       }
-    }
-    if (pin_len == 0) {
-      printf("Error: Couldn't allocate secure memory\n");
-      return;
+      setup_pin(pinentry_info->pin, pinentry_info->pin_len, 0);
     }
   }
 
-  /* Move existing text out of the way, insert new text, and update cursor */
-  memmove(&pin[cursor + n], &pin[cursor], pin_len - cursor - MAX(n, 0));
-
-  if (n > 0) {
-    memcpy(&pin[cursor], str, n);
-  }
-
-  cursor += n;
-  pin[len + n] = '\0';
+  dest = n < 0 ? cursor - removed : cursor + added;
+  memmove(pin + dest, pin + cursor, len - cursor + 1);
+  if (added) memcpy(pin + cursor, str, added);
+  cursor = dest + added;
+  pin[newlen] = '\0';
+  if (newlen + 1 < (size_t)pin_len)
+    secure_clear(pin + newlen + 1, (size_t)pin_len - newlen - 1);
   update_quality();
 }
 
@@ -896,6 +939,7 @@ static int keypress(XKeyEvent* ev) {
       ret = keypress_pin(ev, ksym, buf, len);
     }
 
+    if (pinentry_info->canceled) return 1;
     if (ret == 0) {
       drawwin();
     }
@@ -1020,9 +1064,22 @@ static void password(void) {
     repeat = 1;
     pin_repeat_len = pinentry_info->pin_len;
     pin_repeat = secmem_malloc(pinentry_info->pin_len);
+    if (!pin_repeat) {
+      pinentry_info->specific_err = gpg_error(GPG_ERR_ENOMEM);
+      pinentry_info->canceled = 1;
+      pinentry_info->result = -1;
+      return;
+    }
     setup_pin(pin_repeat, pin_repeat_len, 1);
     run();
 
+    if (pinentry_info->canceled) {
+      secmem_free(pin_repeat);
+      pin_repeat = NULL;
+      pin_repeat_len = 0;
+      pinentry_info->result = -1;
+      return;
+    }
     pinentry_info->repeat_okay =
       (strcmp(pinentry_info->pin, pin_repeat) == 0) ? 1 : 0;
     secmem_free(pin_repeat);
