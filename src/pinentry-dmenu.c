@@ -50,6 +50,12 @@ enum {
 };
 enum { WinPin, WinConfirm };
 enum { Ok, NotOk, Cancel };
+enum { STRING, INTEGER };
+typedef struct {
+  const char* name;
+  int type;
+  void* dst;
+} XResPref;
 
 static int bh, mw, mh;
 static int sel;
@@ -225,41 +231,20 @@ static void setup_buttons(void) {
   sel = button_count ? buttons[0] : Ok;
 }
 
-enum { XResString, XResInteger };
-typedef struct {
-  const char* name;
-  int type;
-  void* destination;
-  int* configured;
-} XResPref;
+static int xresource_configured(const XResPref* resource) {
+  int scheme, color;
 
-static const XResPref resources[] = {
-    {"pinentry-dmenu.font", XResString, &fonts[0], &font_configured},
-    {"pinentry-dmenu.prompt", XResString, &prompt, &prompt_configured},
-    {"pinentry-dmenu.foreground", XResString, &colors[SchemeNormal][ColFg],
-     &color_configured[SchemeNormal][ColFg]},
-    {"pinentry-dmenu.background", XResString, &colors[SchemeNormal][ColBg],
-     &color_configured[SchemeNormal][ColBg]},
-    {"pinentry-dmenu.foregroundSel", XResString,
-     &colors[SchemeSelect][ColFg],
-     &color_configured[SchemeSelect][ColFg]},
-    {"pinentry-dmenu.backgroundSel", XResString,
-     &colors[SchemeSelect][ColBg],
-     &color_configured[SchemeSelect][ColBg]},
-    {"pinentry-dmenu.foregroundOut", XResString, &colors[SchemeDesc][ColFg],
-     &color_configured[SchemeDesc][ColFg]},
-    {"pinentry-dmenu.backgroundOut", XResString, &colors[SchemeDesc][ColBg],
-     &color_configured[SchemeDesc][ColBg]},
-    {"pinentry-dmenu.foregroundNormHighlight", XResString,
-     &colors[SchemeError][ColFg], &color_configured[SchemeError][ColFg]},
-    {"pinentry-dmenu.backgroundNormHighlight", XResString,
-     &colors[SchemeError][ColBg], &color_configured[SchemeError][ColBg]},
-    {"pinentry-dmenu.foregroundSelHighlight", XResString,
-     &colors[SchemePrompt][ColFg], &color_configured[SchemePrompt][ColFg]},
-    {"pinentry-dmenu.backgroundSelHighlight", XResString,
-     &colors[SchemePrompt][ColBg], &color_configured[SchemePrompt][ColBg]},
-    {"pinentry-dmenu.lines", XResInteger, &lines, &lines_configured},
-};
+  if (resource->dst == &fonts[0]) return font_configured;
+  if (resource->dst == &prompt) return prompt_configured;
+  if (resource->dst == &lines) return lines_configured;
+  for (scheme = 0; scheme < SchemeLast; scheme++) {
+    for (color = 0; color < 2; color++) {
+      if (resource->dst == &colors[scheme][color])
+        return color_configured[scheme][color];
+    }
+  }
+  return 0;
+}
 
 static void load_xresources(void) {
   char* resource_manager;
@@ -278,17 +263,17 @@ static void load_xresources(void) {
   if (!database) return;
   for (i = 0; i < LENGTH(resources); i++) {
     const XResPref* resource = &resources[i];
-    if (*resource->configured ||
+    if (xresource_configured(resource) ||
         !XrmGetResource(database, resource->name, NULL, &type, &value) ||
         !value.addr || !type ||
         strncmp(type, "String", sizeof("String")))
       continue;
-    if (resource->type == XResString) {
-      *(const char**)resource->destination = strdup(value.addr);
+    if (resource->type == STRING) {
+      *(const char**)resource->dst = strdup(value.addr);
     } else {
       long parsed = strtol(value.addr, NULL, 10);
       if (parsed > 0 && parsed <= 1024)
-        *(unsigned int*)resource->destination = parsed;
+        *(unsigned int*)resource->dst = parsed;
     }
   }
   XrmDestroyDatabase(database);

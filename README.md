@@ -136,16 +136,16 @@ pinentry-dmenu.font:          SFMono Nerd Font:antialias=true:autohint=true:pixe
 pinentry-dmenu.lines:         8
 
 ! Pinentry colors
-pinentry-dmenu.background:    #14171c
+pinentry-dmenu.background:    #181b21
 pinentry-dmenu.foreground:    #abb2bf
-pinentry-dmenu.backgroundSel: #61afef
-pinentry-dmenu.foregroundSel: #14171c
-pinentry-dmenu.backgroundOut: #56b6c2
-pinentry-dmenu.foregroundOut: #181b21
-pinentry-dmenu.backgroundNormHighlight: #14171c
-pinentry-dmenu.foregroundNormHighlight: #d19a66
-pinentry-dmenu.backgroundSelHighlight:  #61afef
-pinentry-dmenu.foregroundSelHighlight:  #d19a66
+pinentry-dmenu.backgroundSelect: #61afef
+pinentry-dmenu.foregroundSelect: #14171c
+pinentry-dmenu.backgroundPrompt: #61afef
+pinentry-dmenu.foregroundPrompt: #14171c
+pinentry-dmenu.backgroundDesc: #14171c
+pinentry-dmenu.foregroundDesc: #abb2bf
+pinentry-dmenu.backgroundError: #be5046
+pinentry-dmenu.foregroundError: #181b21
 ```
 
 Load the settings with `xrdb`:
