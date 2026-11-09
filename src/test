@@ -1,51 +1,141 @@
 #!/bin/sh
+# Manually exercise pinentry-dmenu through its Assuan input protocol.
+# Requires a built ./pinentry-dmenu. Modes 1-10 also require an X display;
+# mode 11 tests protocol handling without opening the UI.
+#
+# Usage: ./test [MODE]
+# Modes: 1 basic PIN, 2 confirm, 3 repeat PIN, 4-5 multiline descriptions,
+#        6 labeled confirmation, 7 message, 8 error, 9 timeout, 10 repeat error,
+#        11 empty CLEARPASSPHRASE. Missing or unknown MODE runs full flow.
 
 case "${1:-}" in
   1)
-    printf 'SETTITLE title\nSETPROMPT prompt\nSETDESC PROMPT\nGETPIN\nBYE\n' \
-      | ./pinentry-dmenu
+    ./pinentry-dmenu << 'ASSUAN'
+SETTITLE title
+SETPROMPT prompt
+SETDESC PROMPT
+GETPIN
+BYE
+ASSUAN
     ;;
   2)
-    printf 'SETTITLE title\nSETPROMPT confirm\nSETDESC CONFIRM\nconfirm\nBYE\n' \
-      | ./pinentry-dmenu
+    ./pinentry-dmenu << 'ASSUAN'
+SETTITLE title
+SETPROMPT confirm
+SETDESC CONFIRM
+confirm
+BYE
+ASSUAN
     ;;
   3)
-    printf 'SETTITLE title\nSETPROMPT prompt\nSETDESC REPEAT\nSETREPEAT repeat\nGETPIN\nBYE\n' \
-      | ./pinentry-dmenu
+    ./pinentry-dmenu << 'ASSUAN'
+SETTITLE title
+SETPROMPT prompt
+SETDESC REPEAT
+SETREPEAT repeat
+GETPIN
+BYE
+ASSUAN
     ;;
   4)
-    printf 'SETTITLE title\nSETPROMPT prompt\nSETDESC First dmenu-style description line%%0ASecond description line%%0AThird description line%%0AFourth description line%%0AFifth description line%%0AFifth description line\nGETPIN\nBYE\n' \
-      | ./pinentry-dmenu
+    description='First dmenu-style description line%0A'
+    description="${description}Second description line%0A"
+    description="${description}Third description line%0A"
+    description="${description}Fourth description line%0A"
+    description="${description}Fifth description line%0A"
+    description="${description}Fifth description line"
+    {
+      printf '%s\n' 'SETTITLE title'
+      printf '%s\n' 'SETPROMPT prompt'
+      printf 'SETDESC %s\n' "$description"
+      printf '%s\n' 'GETPIN' 'BYE'
+    } | ./pinentry-dmenu
     ;;
   5)
-    printf 'SETTITLE title\nSETPROMPT prompt\nSETDESC First dmenu-style description line%%0ASecond description line%%0AThird description line%%0AFourth description line%%0AFifth description line%%0AFifth description line%%0ASixth description line\nGETPIN\nBYE\n' \
-      | ./pinentry-dmenu
+    description='First dmenu-style description line%0A'
+    description="${description}Second description line%0A"
+    description="${description}Third description line%0A"
+    description="${description}Fourth description line%0A"
+    description="${description}Fifth description line%0A"
+    description="${description}Fifth description line%0A"
+    description="${description}Sixth description line"
+    {
+      printf '%s\n' 'SETTITLE title'
+      printf '%s\n' 'SETPROMPT prompt'
+      printf 'SETDESC %s\n' "$description"
+      printf '%s\n' 'GETPIN' 'BYE'
+    } | ./pinentry-dmenu
     ;;
   6)
-    printf 'SETTITLE Confirmation\nSETDESC Choose an action\nSETOK Accept\nSETNOTOK Reject\nSETCANCEL Cancel\nCONFIRM\nBYE\n' \
-      | ./pinentry-dmenu
+    ./pinentry-dmenu << 'ASSUAN'
+SETTITLE Confirmation
+SETDESC Choose an action
+SETOK Accept
+SETNOTOK Reject
+SETCANCEL Cancel
+CONFIRM
+BYE
+ASSUAN
     ;;
   7)
-    printf 'SETTITLE Message\nSETDESC This is a one-button message\nSETOK Dismiss\nMESSAGE\nBYE\n' \
-      | ./pinentry-dmenu
+    ./pinentry-dmenu << 'ASSUAN'
+SETTITLE Message
+SETDESC This is a one-button message
+SETOK Dismiss
+MESSAGE
+BYE
+ASSUAN
     ;;
   8)
-    printf 'SETTITLE Error test\nSETERROR Example error from GPG\nSETDESC Enter a test PIN\nGETPIN\nBYE\n' \
-      | ./pinentry-dmenu
+    ./pinentry-dmenu << 'ASSUAN'
+SETTITLE Error test
+SETERROR Example error from GPG
+SETDESC Enter a test PIN
+GETPIN
+BYE
+ASSUAN
     ;;
   9)
-    printf 'SETTITLE Timeout test\nSETPROMPT prompt\nSETDESC This request expires automatically\nSETTIMEOUT 3\nGETPIN\nBYE\n' \
-      | ./pinentry-dmenu
+    ./pinentry-dmenu << 'ASSUAN'
+SETTITLE Timeout test
+SETPROMPT prompt
+SETDESC This request expires automatically
+SETTIMEOUT 3
+GETPIN
+BYE
+ASSUAN
     ;;
   10)
-    printf 'SETTITLE Repeat test\nSETPROMPT prompt\nSETDESC Enter same PIN twice\nSETREPEAT Repeat PIN\nSETREPEATERROR PINs did not match\nGETPIN\nBYE\n' \
-      | ./pinentry-dmenu
+    ./pinentry-dmenu << 'ASSUAN'
+SETTITLE Repeat test
+SETPROMPT prompt
+SETDESC Enter same PIN twice
+SETREPEAT Repeat PIN
+SETREPEATERROR PINs did not match
+GETPIN
+BYE
+ASSUAN
     ;;
   11)
-    printf 'CLEARPASSPHRASE\nBYE\n' | ./pinentry-dmenu
+    ./pinentry-dmenu << 'ASSUAN'
+CLEARPASSPHRASE
+BYE
+ASSUAN
     ;;
   *)
-    printf 'SETTITLE title\nSETPROMPT prompt\nSETDESC PROMPT\nGETPIN\nSETPROMPT confirm\nSETDESC CONFIRM\nconfirm\nSETPROMPT repeat\nSETDESC REPEAT\nSETREPEAT\nGETPIN\nBYE\n' \
-      | ./pinentry-dmenu
+    ./pinentry-dmenu << 'ASSUAN'
+SETTITLE title
+SETPROMPT prompt
+SETDESC PROMPT
+GETPIN
+SETPROMPT confirm
+SETDESC CONFIRM
+confirm
+SETPROMPT repeat
+SETDESC REPEAT
+SETREPEAT
+GETPIN
+BYE
+ASSUAN
     ;;
 esac
