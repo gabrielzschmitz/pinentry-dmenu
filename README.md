@@ -140,7 +140,7 @@ pinentry-dmenu.lines:         8
 pinentry-dmenu.background:    #181b21
 pinentry-dmenu.foreground:    #abb2bf
 pinentry-dmenu.backgroundSelect: #61afef
-pinentry-dmenu.foregroundSelect: #14171c
+pinentry-dmenu.foregroundSelect: #181b21
 pinentry-dmenu.backgroundPrompt: #61afef
 pinentry-dmenu.foregroundPrompt: #14171c
 pinentry-dmenu.backgroundDesc: #14171c
