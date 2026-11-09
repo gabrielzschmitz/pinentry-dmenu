@@ -957,18 +957,38 @@ static int keypress(XKeyEvent* ev) {
 }
 
 static void paste(void) {
-  char *p, *q;
-  int di;
-  unsigned long dl;
-  Atom da;
+  unsigned char* property = NULL;
+  unsigned long nitems = 0, bytes_after = 0;
+  int format = 0, status;
+  Atom actual_type = None;
+  size_t length, maximum = (size_t)pin_len / 4 * 4;
+  size_t request_length = pin_len / 4;
+  unsigned char* newline;
+  unsigned char* nul;
 
-  /* We have been given the current selection, now insert it into input */
-  XGetWindowProperty(dpy, win, utf8, 0, pin_len / 4, False, utf8, &da, &di, &dl,
-                     &dl, (unsigned char**)&p);
-  insert(p, (q = strchr(p, '\n')) ? q - p : (ssize_t)strlen(p));
-  XFree(p);
-  drawwin();
-  if (pinentry_info->canceled) return;
+  status = XGetWindowProperty(dpy, win, utf8, 0, request_length, True, utf8,
+                              &actual_type, &format, &nitems, &bytes_after,
+                              &property);
+  XDeleteProperty(dpy, win, utf8);
+
+  if (status != Success || actual_type != utf8 || format != 8 ||
+      bytes_after != 0 || !property || nitems > maximum) {
+    if (property) {
+      if (format == 8 && nitems <= maximum) secure_clear(property, nitems);
+      XFree(property);
+    }
+    return;
+  }
+
+  length = nitems;
+  newline = memchr(property, '\n', length);
+  if (newline) length = newline - property;
+  nul = memchr(property, '\0', length);
+  if (nul) length = nul - property;
+  if (length) insert((const char*)property, (ssize_t)length);
+  secure_clear(property, nitems);
+  XFree(property);
+  if (!pinentry_info->canceled) drawwin();
 }
 
 void run(void) {
