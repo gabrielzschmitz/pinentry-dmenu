@@ -753,7 +753,7 @@ static int keypress_confirm(XKeyEvent* ev, KeySym ksym) {
 }
 
 static int keypress_pin(XKeyEvent* ev, KeySym ksym, char* buf, int len) {
-  int old;
+  size_t old;
 
   if ((ev->state & ShiftMask) && (ksym == XK_v || ksym == XK_V)) {
     paste_selection = clip;
@@ -797,15 +797,15 @@ static int keypress_pin(XKeyEvent* ev, KeySym ksym, char* buf, int len) {
                !strchr(worddelimiters, pin[nextrune(cursor, -1)])) {
           cursor = nextrune(cursor, -1);
         }
-        insert(NULL, old - cursor);
+        insert(NULL, -(ssize_t)(old - cursor));
         break;
       case XK_k:
         old = cursor;
         cursor = strlen(pin);
-        insert(NULL, old - cursor);
+        insert(NULL, -(ssize_t)(cursor - old));
         break;
       case XK_u:
-        insert(NULL, -cursor);
+        insert(NULL, -(ssize_t)cursor);
         break;
       case XK_Return:
       case XK_KP_Enter:
@@ -829,7 +829,7 @@ static int keypress_pin(XKeyEvent* ev, KeySym ksym, char* buf, int len) {
       if (cursor == 0) {
         return 0;
       }
-      insert(NULL, nextrune(cursor, -1) - cursor);
+      insert(NULL, -(ssize_t)(cursor - nextrune(cursor, -1)));
       break;
     case XK_Escape:
       pinentry_info->canceled = 1;
@@ -872,7 +872,7 @@ static int keypress_pin(XKeyEvent* ev, KeySym ksym, char* buf, int len) {
       return 1;
       break;
     default:
-      if (!iscntrl(*buf)) {
+      if (len > 0 && !iscntrl((unsigned char)*buf)) {
         insert(buf, len);
       }
   }
@@ -881,7 +881,7 @@ static int keypress_pin(XKeyEvent* ev, KeySym ksym, char* buf, int len) {
 }
 
 static int keypress(XKeyEvent* ev) {
-  char buf[32];
+  char buf[32] = {0};
   int len;
   int ret = 1;
 
