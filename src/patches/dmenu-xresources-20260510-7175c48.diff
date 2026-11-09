@@ -1,0 +1,147 @@
+From 8320d43fe9634ebe959ac645a108ba913a131ce0 Mon Sep 17 00:00:00 2001
+From: Justinas Grigas <dev@jstnas.com>
+Date: Sun, 10 May 2026 15:25:31 +0100
+Subject: [PATCH] xresources: runtime X Resources loading
+
+---
+ config.def.h | 15 +++++++++++++
+ dmenu.c      | 59 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 74 insertions(+)
+
+diff --git a/config.def.h b/config.def.h
+index 1edb647..e336034 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -21,3 +21,18 @@ static unsigned int lines      = 0;
+  * for example: " /?\"&[]"
+  */
+ static const char worddelimiters[] = " ";
++
++/* X resources to load at startup */
++static const XResPref resources[] = {
++	/* name                  type     address */
++	{ "dmenu.font",          STRING,  &fonts[0] },
++	{ "dmenu.prompt",        STRING,  &prompt },
++	{ "dmenu.foreground",    STRING,  &colors[SchemeNorm][ColFg] },
++	{ "dmenu.background",    STRING,  &colors[SchemeNorm][ColBg] },
++	{ "dmenu.foregroundSel", STRING,  &colors[SchemeSel][ColFg] },
++	{ "dmenu.backgroundSel", STRING,  &colors[SchemeSel][ColBg] },
++	{ "dmenu.foregroundOut", STRING,  &colors[SchemeOut][ColFg] },
++	{ "dmenu.backgroundOut", STRING,  &colors[SchemeOut][ColBg] },
++	{ "dmenu.topbar",        INTEGER, &topbar },
++	{ "dmenu.lines",         INTEGER, &lines },
++};
+diff --git a/dmenu.c b/dmenu.c
+index 363d19f..bbb160e 100644
+--- a/dmenu.c
++++ b/dmenu.c
+@@ -11,6 +11,7 @@
+ #include <X11/Xlib.h>
+ #include <X11/Xatom.h>
+ #include <X11/Xutil.h>
++#include <X11/Xresource.h>
+ #ifdef XINERAMA
+ #include <X11/extensions/Xinerama.h>
+ #endif
+@@ -26,6 +27,7 @@
+ 
+ /* enums */
+ enum { SchemeNorm, SchemeSel, SchemeOut, SchemeLast }; /* color schemes */
++enum XResType { STRING, INTEGER, FLOAT };
+ 
+ struct item {
+ 	char *text;
+@@ -33,6 +35,12 @@ struct item {
+ 	int out;
+ };
+ 
++typedef struct {
++	const char *name;
++	enum XResType type;
++	void *dst;
++} XResPref;
++
+ static char text[BUFSIZ] = "";
+ static char *embed;
+ static int bh, mw, mh;
+@@ -52,6 +60,8 @@ static XIC xic;
+ static Drw *drw;
+ static Clr *scheme[SchemeLast];
+ 
++static XrmDatabase xrdb;
++
+ #include "config.h"
+ 
+ static int (*fstrncmp)(const char *, const char *, size_t) = strncmp;
+@@ -107,6 +117,7 @@ cleanup(void)
+ 		free(items[i].text);
+ 	free(items);
+ 	drw_free(drw);
++	XrmDestroyDatabase(xrdb);
+ 	XSync(dpy, False);
+ 	XCloseDisplay(dpy);
+ }
+@@ -718,12 +729,60 @@ usage(void)
+ 	    "             [-nb color] [-nf color] [-sb color] [-sf color] [-w windowid]");
+ }
+ 
++void
++xresload(const XResPref *resource)
++{
++	char *type;
++	XrmValue ret;
++
++	if (!XrmGetResource(xrdb, resource->name, NULL, &type, &ret))
++		return;
++	if (!ret.addr || strncmp(type, "String", sizeof("String")))
++		return;
++
++	switch (resource->type) {
++	case STRING:
++		*(char **)resource->dst = ret.addr;
++		break;
++	case INTEGER:
++		*(int *)resource->dst = strtoul(ret.addr, NULL, 10);
++		break;
++	case FLOAT:
++		*(float *)resource->dst = strtof(ret.addr, NULL);
++		break;
++	}
++}
++
++void
++xresupdate(void)
++{
++	Display *display;
++	char *resm;
++	const XResPref *p;
++
++	display = XOpenDisplay(NULL);
++	if (!display)
++		return;
++	resm = XResourceManagerString(display);
++	if (resm) {
++		xrdb = XrmGetStringDatabase(resm);
++		if (xrdb) {
++			for (p = resources; p < resources + LENGTH(resources); ++p)
++				xresload(p);
++		}
++	}
++	XCloseDisplay(display);
++}
++
+ int
+ main(int argc, char *argv[])
+ {
+ 	XWindowAttributes wa;
+ 	int i, fast = 0;
+ 
++	XrmInitialize();
++	xresupdate();
++
+ 	for (i = 1; i < argc; i++)
+ 		/* these options take no arguments */
+ 		if (!strcmp(argv[i], "-v")) {      /* prints version information */
+-- 
+2.53.0
+

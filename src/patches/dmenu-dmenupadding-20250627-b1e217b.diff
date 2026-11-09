@@ -1,0 +1,48 @@
+From 64b8bbdc00a0fea6af5855bd56c7b92589cdfdcd Mon Sep 17 00:00:00 2001
+From: lorcan <lorcantodea@gmail.com>
+Date: Fri, 27 Jun 2025 19:58:45 -0400
+Subject: [PATCH] port of the dwm statuspadding patch for dmenu
+
+---
+ config.def.h | 2 ++
+ dmenu.c      | 4 ++--
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/config.def.h b/config.def.h
+index 1edb647..a8258e6 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -2,6 +2,8 @@
+ /* Default settings; can be overriden by command line. */
+ 
+ static int topbar = 1;                      /* -b  option; if 0, dmenu appears at bottom     */
++static int horizpadbar = 2;                 /* horizontal padding */
++static int vertpadbar = 0;                  /* vertical padding */
+ /* -fn option overrides fonts[0]; default X11 font or font set */
+ static const char *fonts[] = {
+ 	"monospace:size=10"
+diff --git a/dmenu.c b/dmenu.c
+index fd49549..6bc6d78 100644
+--- a/dmenu.c
++++ b/dmenu.c
+@@ -633,7 +633,7 @@ setup(void)
+ 	utf8 = XInternAtom(dpy, "UTF8_STRING", False);
+ 
+ 	/* calculate menu geometry */
+-	bh = drw->fonts->h + 2;
++	bh = drw->fonts->h + vertpadbar;
+ 	lines = MAX(lines, 0);
+ 	mh = (lines + 1) * bh;
+ #ifdef XINERAMA
+@@ -774,7 +774,7 @@ main(int argc, char *argv[])
+ 	drw = drw_create(dpy, screen, root, wa.width, wa.height);
+ 	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
+ 		die("no fonts could be loaded.");
+-	lrpad = drw->fonts->h;
++	lrpad = drw->fonts->h + horizpadbar;
+ 
+ #ifdef __OpenBSD__
+ 	if (pledge("stdio rpath", NULL) == -1)
+-- 
+2.50.0
+
