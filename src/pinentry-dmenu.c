@@ -32,6 +32,7 @@
 
 #define CONFIG_DIR "/.gnupg"
 #define CONFIG_FILE "/pinentry-dmenu.conf"
+#define MAX_ASTERISK_BYTES 16
 #define INTERSECT(x, y, w, h, r)                                          \
   (MAX(0, MIN((x) + (w), (r).x_org + (r).width) - MAX((x), (r).x_org)) && \
    MAX(0, MIN((y) + (h), (r).y_org + (r).height) - MAX((y), (r).y_org)))
@@ -447,6 +448,7 @@ static void drawwin(void) {
   size_t asterlen = strlen(asterisk);
   int leftinput;
   char* censort;
+  size_t pin_bytes;
 
   char* pprompt =
     (repeat) ? pinentry_info->repeat_passphrase : pinentry_info->prompt;
@@ -482,9 +484,15 @@ static void drawwin(void) {
 
   if (winmode == WinPin) {
     drw_setscheme(drw, scheme[SchemeNormal]);
-    censort = ecalloc(1, asterlen * pin_len);
+    pin_bytes = strlen(pin);
+    if (pin_bytes > (SIZE_MAX - 1) / asterlen) {
+      pinentry_info->canceled = 1;
+      pinentry_info->specific_err = gpg_error(GPG_ERR_ENOMEM);
+      return;
+    }
+    censort = ecalloc(pin_bytes * asterlen + 1, sizeof(*censort));
 
-    for (i = 0; i < asterlen * strlen(pin); i += asterlen) {
+    for (i = 0; i < asterlen * pin_bytes; i += asterlen) {
       memcpy(&censort[i], asterisk, asterlen);
     }
 
@@ -960,6 +968,7 @@ static void paste(void) {
   insert(p, (q = strchr(p, '\n')) ? q - p : (ssize_t)strlen(p));
   XFree(p);
   drawwin();
+  if (pinentry_info->canceled) return;
 }
 
 void run(void) {
@@ -1220,7 +1229,12 @@ int main(int argc, char* argv[]) {
   /* Read the file. If there is an error, report it and exit. */
   if (config_read_file(&cfg, path)) {
     if (config_lookup_string(&cfg, "asterisk", &str)) {
-      asterisk = str;
+      size_t asterisk_len = strnlen(str, MAX_ASTERISK_BYTES + 1);
+      if (asterisk_len == 0 || asterisk_len > MAX_ASTERISK_BYTES) {
+        fprintf(stderr, "Ignoring empty or oversized asterisk setting.\n");
+      } else {
+        asterisk = str;
+      }
     }
     if (config_lookup_int(&cfg, "monitor", &val)) {
       mon = val;
