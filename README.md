@@ -86,7 +86,8 @@ environment.systemPackages = [
 ];
 ```
 
-Replace `/path/to/pinentry-dmenu` with the path to your local clone, then rebuild:
+Replace `/path/to/pinentry-dmenu` with the path to your local clone, then
+rebuild:
 
 ```sh
 sudo nixos-rebuild switch
@@ -157,17 +158,17 @@ xrdb -merge ~/.Xresources
 ## GnuPG integration
 
 The frontend displays Assuan titles, errors, repeat errors, custom action
-labels as full-width dmenu-style rows below prompt, one-button messages, and live
-passphrase-quality feedback. Action rows and the selected-action count appear
-only when GPG supplies matching button options. Keyboard actions remain
-available without configured button labels.
-Mouse hover selects actions; left-click activates them, middle-click pastes
-selection, and right-click cancels. `SETKEYINFO`,
-`GETINFO`, and `CLEARPASSPHRASE` remain handled by bundled pinentry core.
+labels as full-width dmenu-style rows below prompt, one-button messages, and
+live passphrase-quality feedback. Action rows and the selected-action count
+appear only when GPG supplies matching button options. Keyboard actions remain
+available without configured button labels. Mouse hover selects actions;
+left-click activates them, middle-click pastes selection, and right-click
+cancels. `SETKEYINFO`, `GETINFO`, and `CLEARPASSPHRASE` remain handled by
+bundled pinentry core.
 
-Run `cd src && ./test 5` for custom confirmation buttons, `./test 6` for a
-one-button message, `./test 7` for an error prompt, `./test 8` for timeout, or
-`./test 9` for repeated-entry validation. `./test 10` checks empty cache-clear
+Run `cd src && ./test 6` for custom confirmation buttons, `./test 7` for a
+one-button message, `./test 7` for an error prompt, `./test 9` for timeout, or
+`./test 10` for repeated-entry validation. `./test 11` checks empty cache-clear
 arguments.
 
 ## License
