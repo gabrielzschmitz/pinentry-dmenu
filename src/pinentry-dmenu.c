@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <gpg-error.h>
 #include <errno.h>
+#include <limits.h>
 #include <libconfig.h>
 #include <locale.h>
 #include <poll.h>
@@ -1111,7 +1112,9 @@ pinentry_cmd_handler_t pinentry_cmd_handler = cmdhandler;
 
 int main(int argc, char* argv[]) {
   Bool bval;
-  int i, val;
+  int path_length, val;
+  unsigned long sudo_uid_value;
+  char* end;
   const char* str;
   struct passwd* pw;
   char path[PATH_MAX];
@@ -1120,24 +1123,39 @@ int main(int argc, char* argv[]) {
   char* gnupghome = getenv("GNUPGHOME");
   config_t cfg;
 
-  if (gnupghome) {
-    i = strlen(gnupghome);
-    strcpy(path, gnupghome);
+  if (gnupghome && *gnupghome) {
+    path_length = snprintf(path, sizeof(path), "%s%s", gnupghome,
+                           CONFIG_FILE);
   } else {
     /* Get the home dir even if the user used sudo or logged in as root */
     if (sudo_uid) {
-      i = atoi(sudo_uid);
-      pw = getpwuid(i);
+      errno = 0;
+      sudo_uid_value = strtoul(sudo_uid, &end, 10);
+      if (errno || end == sudo_uid || *end || *sudo_uid == '-' ||
+          sudo_uid_value > (unsigned long)((uid_t)-1)) {
+        fputs("Invalid SUDO_UID; cannot locate pinentry config.\n", stderr);
+        return EXIT_FAILURE;
+      }
+      pw = getpwuid((uid_t)sudo_uid_value);
+      if (!pw || !pw->pw_dir) {
+        fputs("SUDO_UID has no passwd entry; cannot locate pinentry config.\n",
+              stderr);
+        return EXIT_FAILURE;
+      }
       home = pw->pw_dir;
     }
 
-    i = strlen(home);
-    strcpy(path, home);
-    strcpy(&path[i], CONFIG_DIR);
-    i += strlen(CONFIG_DIR);
+    if (!home || !*home) {
+      fputs("HOME is unset; cannot locate pinentry config.\n", stderr);
+      return EXIT_FAILURE;
+    }
+    path_length = snprintf(path, sizeof(path), "%s%s%s", home, CONFIG_DIR,
+                           CONFIG_FILE);
   }
-
-  strcpy(&path[i], CONFIG_FILE);
+  if (path_length < 0 || (size_t)path_length >= sizeof(path)) {
+    fputs("Pinentry config path is too long.\n", stderr);
+    return EXIT_FAILURE;
+  }
   endpwent();
 
   config_init(&cfg);
