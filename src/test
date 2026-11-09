@@ -37,6 +37,9 @@ case "${1:-}" in
     printf 'SETTITLE Repeat test\nSETPROMPT prompt\nSETDESC Enter same PIN twice\nSETREPEAT Repeat PIN\nSETREPEATERROR PINs did not match\nGETPIN\nBYE\n' |
       ./pinentry-dmenu
     ;;
+  10)
+    printf 'CLEARPASSPHRASE\nBYE\n' | ./pinentry-dmenu
+    ;;
   *)
     printf 'SETTITLE title\nSETPROMPT prompt\nSETDESC PROMPT\nGETPIN\nSETPROMPT confirm\nSETDESC CONFIRM\nconfirm\nSETPROMPT repeat\nSETDESC REPEAT\nSETREPEAT\nGETPIN\nBYE\n' |
       ./pinentry-dmenu

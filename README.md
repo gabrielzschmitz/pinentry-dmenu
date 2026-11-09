@@ -167,7 +167,8 @@ selection, and right-click cancels. `SETKEYINFO`,
 
 Run `cd src && ./test 5` for custom confirmation buttons, `./test 6` for a
 one-button message, `./test 7` for an error prompt, `./test 8` for timeout, or
-`./test 9` for repeated-entry validation.
+`./test 9` for repeated-entry validation. `./test 10` checks empty cache-clear
+arguments.
 
 ## License
 
