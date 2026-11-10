@@ -523,9 +523,11 @@ static void drawwin(void) {
   int x = 0, i, fh = drw->fonts->h, number_index = 0, number_width;
   int text_width;
   int quality_row = winmode == WinPin && pinentry_info->quality_bar;
-  int quality_first_row = 1 + button_count + error_rows;
+  int button_first_row = 1 + description_rows;
+  int error_first_row = button_first_row + button_count;
+  int quality_first_row = error_first_row + error_rows;
   int hint_first_row = quality_first_row + quality_row;
-  int description_first_row = hint_first_row + quality_hint_line_count;
+  int description_first_row = 1;
   int error_count =
     repeat_error_visible ? repeat_error_line_count : error_line_count;
   char** visible_errors =
@@ -597,7 +599,8 @@ static void drawwin(void) {
   }
 
   for (i = 0; i < button_count; i++) {
-    drawitem(button_labels[i], sel == buttons[i], 0, bh * (i + 1), mw);
+    drawitem(button_labels[i], sel == buttons[i], 0,
+             bh * (button_first_row + i), mw);
   }
   if (button_count) {
     drw_setscheme(drw, scheme[SchemeNormal]);
@@ -605,13 +608,13 @@ static void drawwin(void) {
              0);
   }
 
-  for (row = 1 + button_count; row <= button_count + error_rows; row++) {
+  for (row = error_first_row; row < error_first_row + error_rows; row++) {
     drw_setscheme(drw, scheme[SchemeError]);
     drw_rect(drw, 0, bh * row, mw, bh, 1, 1);
   }
   for (i = 0; i < error_count; i++) {
     drw_setscheme(drw, scheme[SchemeError]);
-    drw_text(drw, 0, bh * (button_count + i + 1), mw, bh, lrpad / 2,
+      drw_text(drw, 0, bh * (error_first_row + i), mw, bh, lrpad / 2,
              visible_errors[i], 0);
   }
 
@@ -758,9 +761,8 @@ static void setup(void) {
   description_lines = wrap_description(
     pinentry_info->description, MAX(1, mw - lrpad), &description_line_count);
   description_rows = MAX(lines, description_line_count);
-  mh =
-    bh * (1 + button_count + error_rows + (pinentry_info->quality_bar ? 1 : 0) +
-          quality_hint_line_count + description_rows);
+  mh = bh * (1 + description_rows + button_count + error_rows +
+             (pinentry_info->quality_bar ? 1 : 0) + quality_hint_line_count);
   y = screeny + (screenh - mh) / menu_height_ratio;
 
   /* Create menu window */
@@ -1116,8 +1118,9 @@ void run(void) {
         if (keypress(&ev.xkey)) return;
         break;
       case MotionNotify:
-        if (ev.xmotion.y >= bh && ev.xmotion.y < bh * (button_count + 1)) {
-          int index = ev.xmotion.y / bh - 1;
+        if (ev.xmotion.y >= bh * (1 + description_rows) &&
+            ev.xmotion.y < bh * (1 + description_rows + button_count)) {
+          int index = ev.xmotion.y / bh - 1 - description_rows;
           if (sel != buttons[index]) {
             sel = buttons[index];
             drawwin();
@@ -1143,8 +1146,9 @@ void run(void) {
           break;
         }
         if (ev.xbutton.button != Button1) break;
-        if (ev.xbutton.y >= bh && ev.xbutton.y < bh * (button_count + 1)) {
-          int index = ev.xbutton.y / bh - 1;
+        if (ev.xbutton.y >= bh * (1 + description_rows) &&
+            ev.xbutton.y < bh * (1 + description_rows + button_count)) {
+          int index = ev.xbutton.y / bh - 1 - description_rows;
           sel = buttons[index];
           if (sel == Cancel) pinentry_info->canceled = 1;
           return;
