@@ -11,6 +11,8 @@ with [ritze/pinentry-dmenu](https://github.com/ritze/pinentry-dmenu) to
 implement Pinentry support, incorporating additional patches and configuration
 changes. The repository builds and installs only `pinentry-dmenu`.
 
+---
+
 ## Features
 
 - Minimal and lightweight pinentry menu
