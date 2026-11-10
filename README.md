@@ -137,6 +137,7 @@ Treat every client connected to the same X server as trusted.
 Pinentry uses its own `pinentry-dmenu.*` Xresources. Original `dmenu.*`
 resources stay untouched for dmenu. Dmenu highlight colors map to prompt/error
 colors. Config-file values take precedence. Centering stays enabled.
+Border foreground color means focused; border background color means unfocused.
 
 Add your preferred settings to `~/.Xresources`, for example:
 
@@ -157,6 +158,9 @@ pinentry-dmenu.backgroundDesc: #181b21
 pinentry-dmenu.foregroundDesc: #abb2bf
 pinentry-dmenu.backgroundError: #be5046
 pinentry-dmenu.foregroundError: #181b21
+pinentry-dmenu.borderpx:       3
+pinentry-dmenu.focusedBorder: #abb2bf
+pinentry-dmenu.unfocusedBorder: #282c34
 ```
 
 Load the settings with `xrdb`:

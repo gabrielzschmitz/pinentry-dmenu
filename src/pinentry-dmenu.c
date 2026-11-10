@@ -46,6 +46,7 @@ enum {
   SchemeSelect,
   SchemeDesc,
   SchemeError,
+  SchemeBorder,
   SchemeLast
 };
 enum { WinPin, WinConfirm };
@@ -320,7 +321,12 @@ static void load_xresources(void) {
       *(const char**)resource->dst = strdup(value.addr);
     } else {
       long parsed = strtol(value.addr, NULL, 10);
-      if (parsed > 0 && parsed <= 1024) *(unsigned int*)resource->dst = parsed;
+      if (resource->dst == &borderpx) {
+        if (parsed >= 0 && parsed <= 1024)
+          *(unsigned int*)resource->dst = (unsigned int)parsed;
+      } else if (parsed > 0 && parsed <= 1024) {
+        *(unsigned int*)resource->dst = (unsigned int)parsed;
+      }
     }
   }
   XrmDestroyDatabase(database);
@@ -426,6 +432,10 @@ static void focusmenu(void) {
       XGrabKeyboard(dpy, win, False, GrabModeAsync, GrabModeAsync,
                     CurrentTime) == GrabSuccess)
     menu_keyboard_grabbed = 1;
+}
+
+static unsigned long menu_border_pixel(void) {
+  return scheme[SchemeBorder][menu_focused ? ColFg : ColBg].pixel;
 }
 
 static void releasemenu(void) {
@@ -712,6 +722,7 @@ static void setup(void) {
   scheme[SchemeSelect] = drw_scm_create(drw, colors[SchemeSelect], 2);
   scheme[SchemeDesc] = drw_scm_create(drw, colors[SchemeDesc], 2);
   scheme[SchemeError] = drw_scm_create(drw, colors[SchemeError], 2);
+  scheme[SchemeBorder] = drw_scm_create(drw, colors[SchemeBorder], 2);
 
   clip = XInternAtom(dpy, "CLIPBOARD", False);
   utf8 = XInternAtom(dpy, "UTF8_STRING", False);
@@ -796,12 +807,15 @@ static void setup(void) {
   /* Create menu window */
   swa.override_redirect = True;
   swa.background_pixel = scheme[SchemePrompt][ColBg].pixel;
+  swa.border_pixel = menu_border_pixel();
   swa.event_mask = ExposureMask | KeyPressMask | ButtonPressMask |
                    PointerMotionMask | EnterWindowMask | LeaveWindowMask |
                    FocusChangeMask | VisibilityChangeMask;
-  win = XCreateWindow(dpy, parentwin, x, y, mw, mh, 0, CopyFromParent,
+  win = XCreateWindow(dpy, parentwin, x, y, mw, mh, borderpx, CopyFromParent,
                       CopyFromParent, CopyFromParent,
-                      CWOverrideRedirect | CWBackPixel | CWEventMask, &swa);
+                      CWOverrideRedirect | CWBackPixel | CWBorderPixel |
+                        CWEventMask,
+                      &swa);
   XSetClassHint(dpy, win, &class_hint);
   netwmname = XInternAtom(dpy, "_NET_WM_NAME", False);
   netwmicon = XInternAtom(dpy, "_NET_WM_ICON", False);
@@ -859,6 +873,7 @@ static void cleanup(void) {
   button_count = 0;
   free(scheme[SchemeDesc]);
   free(scheme[SchemeError]);
+  free(scheme[SchemeBorder]);
   free(scheme[SchemeSelect]);
   free(scheme[SchemeNormal]);
   free(scheme[SchemePrompt]);
@@ -1159,12 +1174,14 @@ void run(void) {
       case FocusIn:
         menu_focused = 1;
         caret_visible = 1;
+        XSetWindowBorder(dpy, win, menu_border_pixel());
         drawwin();
         break;
       case FocusOut:
         menu_focused = 0;
         caret_visible = 0;
         releasemenu();
+        XSetWindowBorder(dpy, win, menu_border_pixel());
         drawwin();
         break;
       case MotionNotify:

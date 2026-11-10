@@ -9,6 +9,7 @@ static int vertpadbar = 12;
 static int lineheight = 50;
 static int min_lineheight = 20;
 static unsigned int lines = 0; /* min of lines for Desc, grow if necessary*/
+static unsigned int borderpx = 3;
 
 static const char* fonts[] = {
   "SFMono Nerd Font:antialias=true:autohint=true:pixelsize=20"};
@@ -19,6 +20,7 @@ static const char* colors[SchemeLast][2] = {
   [SchemeSelect] = {"#14171c", "#61afef"},
   [SchemeDesc] = {"#abb2bf", "#181b21"},
   [SchemeError] = {"#181b21", "#be5046"},
+  [SchemeBorder] = {"#abb2bf", "#282c34"}, /* focused, unfocused */
 };
 
 /* Pinentry-specific X resources. */
@@ -35,6 +37,9 @@ static const XResPref resources[] = {
   {"pinentry-dmenu.backgroundDesc", STRING, &colors[SchemeDesc][ColBg]},
   {"pinentry-dmenu.foregroundError", STRING, &colors[SchemeError][ColFg]},
   {"pinentry-dmenu.backgroundError", STRING, &colors[SchemeError][ColBg]},
+  {"pinentry-dmenu.focusedBorder", STRING, &colors[SchemeBorder][ColFg]},
+  {"pinentry-dmenu.unfocusedBorder", STRING, &colors[SchemeBorder][ColBg]},
+  {"pinentry-dmenu.borderpx", INTEGER, &borderpx},
   {"pinentry-dmenu.lines", INTEGER, &lines},
 };
 
