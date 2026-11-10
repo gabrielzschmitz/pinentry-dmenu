@@ -8,16 +8,16 @@ static int horizpadbar = 20;
 static int vertpadbar = 12;
 static int lineheight = 50;
 static int min_lineheight = 20;
-static unsigned int lines = 5;
+static unsigned int lines = 0; /* min of lines for Desc, grow if necessary*/
 
 static const char* fonts[] = {
   "SFMono Nerd Font:antialias=true:autohint=true:pixelsize=20"};
 static const char* prompt = NULL;
 static const char* colors[SchemeLast][2] = {
   [SchemePrompt] = {"#14171c", "#61afef"},
-  [SchemeNormal] = {"#abb2bf", "#181b21"},
-  [SchemeSelect] = {"#181b21", "#61afef"},
-  [SchemeDesc] = {"#abb2bf", "#14171c"},
+  [SchemeNormal] = {"#abb2bf", "#14171c"},
+  [SchemeSelect] = {"#14171c", "#61afef"},
+  [SchemeDesc] = {"#abb2bf", "#181b21"},
   [SchemeError] = {"#181b21", "#be5046"},
 };
 

@@ -142,16 +142,16 @@ Add your preferred settings to `~/.Xresources`, for example:
 ! Pinentry dmenu options
 pinentry-dmenu.font:          SFMono Nerd Font:antialias=true:autohint=true:pixelsize=20
 ! pinentry-dmenu.prompt:        PROMPT
-pinentry-dmenu.lines:         8
+pinentry-dmenu.lines:         0
 
 ! Pinentry colors
-pinentry-dmenu.background:    #181b21
+pinentry-dmenu.background:    #14171c
 pinentry-dmenu.foreground:    #abb2bf
 pinentry-dmenu.backgroundSelect: #61afef
-pinentry-dmenu.foregroundSelect: #181b21
+pinentry-dmenu.foregroundSelect: #14171c
 pinentry-dmenu.backgroundPrompt: #61afef
 pinentry-dmenu.foregroundPrompt: #14171c
-pinentry-dmenu.backgroundDesc: #14171c
+pinentry-dmenu.backgroundDesc: #181b21
 pinentry-dmenu.foregroundDesc: #abb2bf
 pinentry-dmenu.backgroundError: #be5046
 pinentry-dmenu.foregroundError: #181b21
