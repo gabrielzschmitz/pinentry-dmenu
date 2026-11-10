@@ -66,6 +66,7 @@ static size_t cursor;
 static int screen;
 static int font_configured;
 static int prompt_configured;
+static int menu_keyboard_grabbed;
 static int lines_configured;
 static int xresources_loaded;
 static int color_configured[SchemeLast][2];
@@ -406,6 +407,30 @@ static void grabfocus(void) {
 
 static int keyboard_grab_enabled(void) {
   return grab_keyboard && pinentry_info->grab;
+}
+
+static void focusmenu(void) {
+  Window query_root, query_child;
+  int root_x, root_y, win_x, win_y;
+  unsigned int mask;
+
+  if (!keyboard_grab_enabled())
+    XSetInputFocus(dpy, win, RevertToParent, CurrentTime);
+  if (xic) XSetICFocus(xic);
+  if (!keyboard_grab_enabled() && !menu_keyboard_grabbed &&
+      XQueryPointer(dpy, win, &query_root, &query_child, &root_x, &root_y,
+                    &win_x, &win_y, &mask) &&
+      win_x >= 0 && win_x < mw && win_y >= 0 && win_y < mh &&
+      XGrabKeyboard(dpy, win, False, GrabModeAsync, GrabModeAsync,
+                    CurrentTime) == GrabSuccess)
+    menu_keyboard_grabbed = 1;
+}
+
+static void releasemenu(void) {
+  if (menu_keyboard_grabbed) {
+    XUngrabKeyboard(dpy, CurrentTime);
+    menu_keyboard_grabbed = 0;
+  }
 }
 
 static void grabkeyboard(void) {
@@ -769,7 +794,8 @@ static void setup(void) {
   swa.override_redirect = True;
   swa.background_pixel = scheme[SchemePrompt][ColBg].pixel;
   swa.event_mask = ExposureMask | KeyPressMask | ButtonPressMask |
-                   PointerMotionMask | VisibilityChangeMask;
+                   PointerMotionMask | EnterWindowMask | LeaveWindowMask |
+                   FocusChangeMask | VisibilityChangeMask;
   win = XCreateWindow(dpy, parentwin, x, y, mw, mh, 0, CopyFromParent,
                       CopyFromParent, CopyFromParent,
                       CWOverrideRedirect | CWBackPixel | CWEventMask, &swa);
@@ -787,8 +813,7 @@ static void setup(void) {
   xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
                   XNClientWindow, win, XNFocusWindow, win, NULL);
   XMapRaised(dpy, win);
-  if (!keyboard_grab_enabled())
-    XSetInputFocus(dpy, win, RevertToParent, CurrentTime);
+  focusmenu();
 
   if (embedded) {
     XSelectInput(dpy, parentwin, FocusChangeMask);
@@ -1117,7 +1142,15 @@ void run(void) {
       case KeyPress:
         if (keypress(&ev.xkey)) return;
         break;
+      case EnterNotify:
+        focusmenu();
+        break;
+      case LeaveNotify:
+      case FocusOut:
+        releasemenu();
+        break;
       case MotionNotify:
+        focusmenu();
         if (ev.xmotion.y >= bh * (1 + description_rows) &&
             ev.xmotion.y < bh * (1 + description_rows + button_count)) {
           int index = ev.xmotion.y / bh - 1 - description_rows;
@@ -1130,8 +1163,8 @@ void run(void) {
       case ButtonPress:
         if (!keyboard_grab_enabled()) {
           XRaiseWindow(dpy, win);
-          XSetInputFocus(dpy, win, RevertToParent, CurrentTime);
         }
+        focusmenu();
         if (ev.xbutton.button == Button3) {
           pinentry_info->canceled = 1;
           sel = Cancel;
