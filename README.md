@@ -122,6 +122,14 @@ rows are reserved by default; descriptions bottom-align and grow window when
 they need more rows. `Ctrl+w` deletes previous word; `worddelimiters` in
 `src/config.def.h` controls word boundaries.
 
+Keyboard grabbing is disabled by default so focus can move to other apps. Set
+`grab_keyboard = true;` to enable it; GPG's `OPTION no-grab` still disables the
+grab for that request.
+
+**Security:** without a keyboard grab, another X11 app can steal focus and
+receive passphrase keystrokes. Verify pinentry still has focus before typing.
+Treat every client connected to the same X server as trusted.
+
 ### Xresources (`xrdb`)
 
 Pinentry uses its own `pinentry-dmenu.*` Xresources. Original `dmenu.*`

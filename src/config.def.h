@@ -42,5 +42,6 @@ static const char worddelimiters[] = " ";
 
 /* Pinentry-specific settings. `asterisk` replaces dmenu's `passwdchar`. */
 static int embedded = 0;
+static int grab_keyboard = 0; /* opt in; GPG can still request no-grab */
 static int mon = -1;
 static const char* asterisk = "*";

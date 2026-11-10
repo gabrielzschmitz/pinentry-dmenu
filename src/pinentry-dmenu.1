@@ -81,10 +81,19 @@ Defines the error foreground color.
 .TP
 .BI "embedded =" " false"
 Embed into window.
+.TP
+.BI "grab_keyboard =" " false"
+Grab the keyboard while the dialog is open. Disabled by default; GPG's
+.B OPTION no-grab
+always disables keyboard grabbing for that request.
 
 
 .SH USAGE
-pinentry-dmenu is completely controlled by the keyboard.
+pinentry-dmenu supports keyboard and mouse input.
+.PP
+Without keyboard grabbing, focus can move to other applications. Verify that
+pinentry-dmenu has focus before entering a passphrase; other clients on the
+same X server can receive keystrokes if they steal focus.
 .TP
 .B Return
 Confirm input

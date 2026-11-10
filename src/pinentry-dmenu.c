@@ -352,10 +352,14 @@ static void grabfocus(void) {
   die("cannot grab focus");
 }
 
+static int keyboard_grab_enabled(void) {
+  return grab_keyboard && pinentry_info->grab;
+}
+
 static void grabkeyboard(void) {
   int i;
 
-  if (embedded) {
+  if (embedded || !keyboard_grab_enabled()) {
     return;
   }
 
@@ -725,6 +729,8 @@ static void setup(void) {
   xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
                   XNClientWindow, win, XNFocusWindow, win, NULL);
   XMapRaised(dpy, win);
+  if (!keyboard_grab_enabled())
+    XSetInputFocus(dpy, win, RevertToParent, CurrentTime);
 
   if (embedded) {
     XSelectInput(dpy, parentwin, FocusChangeMask);
@@ -1063,6 +1069,10 @@ void run(void) {
         }
         break;
       case ButtonPress:
+        if (!keyboard_grab_enabled()) {
+          XRaiseWindow(dpy, win);
+          XSetInputFocus(dpy, win, RevertToParent, CurrentTime);
+        }
         if (ev.xbutton.button == Button3) {
           pinentry_info->canceled = 1;
           sel = Cancel;
@@ -1083,7 +1093,7 @@ void run(void) {
           if (sel == Cancel) pinentry_info->canceled = 1;
           return;
         }
-        if (winmode == WinPin && ev.xbutton.y < bh) {
+        if (winmode == WinPin && keyboard_grab_enabled() && ev.xbutton.y < bh) {
           cursor = strlen(pin);
           insert(NULL, -(ssize_t)cursor);
           drawwin();
@@ -1093,7 +1103,8 @@ void run(void) {
         if (ev.xselection.property == utf8) paste();
         break;
       case VisibilityNotify:
-        if (ev.xvisibility.state != VisibilityUnobscured)
+        if (keyboard_grab_enabled() &&
+            ev.xvisibility.state != VisibilityUnobscured)
           XRaiseWindow(dpy, win);
         break;
       case ClientMessage:
@@ -1376,6 +1387,9 @@ int main(int argc, char* argv[]) {
     }
     if (config_lookup_bool(&cfg, "embedded", &bval)) {
       embedded = bval;
+    }
+    if (config_lookup_bool(&cfg, "grab_keyboard", &bval)) {
+      grab_keyboard = bval;
     }
   } else if ((str = config_error_file(&cfg))) {
     fprintf(stderr, "%s:%d: %s\n", config_error_file(&cfg),
