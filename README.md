@@ -1,6 +1,6 @@
 # pinentry-dmenu
 
-<img align="right" width="192px" src="./dmenu.svg" alt="dmenu Logo">
+<img align="right" width="192px" src="./pinentry-dmenu.svg" alt="dmenu Logo">
 
 <a href="./LICENSE"><img src="https://img.shields.io/badge/license-GPLv2-blue" alt="License"></a>
 <a href="https://www.buymeacoffee.com/gabrielzschmitz" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 20px !important;width: 87px;" ></a>
