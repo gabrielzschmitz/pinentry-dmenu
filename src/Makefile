@@ -37,12 +37,14 @@ clean:
 	$(MAKE) -C pinentry/ clean
 
 install: all
-	@mkdir -p ${DESTDIR}${PREFIX}/bin ${DESTDIR}${MANPREFIX}/man1
+	@mkdir -p ${DESTDIR}${PREFIX}/bin ${DESTDIR}${MANPREFIX}/man1 ${DESTDIR}${ICONPREFIX}/hicolor/256x256/apps ${DESTDIR}${ICONPREFIX}/hicolor/scalable/apps
 	@install -m 755 pinentry-dmenu ${DESTDIR}${PREFIX}/bin/pinentry-dmenu
+	@install -m 644 pinentry-dmenu.png ${DESTDIR}${ICONPREFIX}/hicolor/256x256/apps/pinentry-dmenu.png
+	@install -m 644 ../pinentry-dmenu.svg ${DESTDIR}${ICONPREFIX}/hicolor/scalable/apps/pinentry-dmenu.svg
 	@sed "s/VERSION/${VERSION}/g;s/DATE/${DATE}/g;s/BUGREPORT/${BUGREPORT}/g" < pinentry-dmenu.1 > ${DESTDIR}${MANPREFIX}/man1/pinentry-dmenu.1
 	@chmod 644 ${DESTDIR}${MANPREFIX}/man1/pinentry-dmenu.1
 
 uninstall:
-	@rm -f ${DESTDIR}${PREFIX}/bin/pinentry-dmenu ${DESTDIR}${MANPREFIX}/man1/pinentry-dmenu.1
+	@rm -f ${DESTDIR}${PREFIX}/bin/pinentry-dmenu ${DESTDIR}${MANPREFIX}/man1/pinentry-dmenu.1 ${DESTDIR}${ICONPREFIX}/hicolor/256x256/apps/pinentry-dmenu.png ${DESTDIR}${ICONPREFIX}/hicolor/scalable/apps/pinentry-dmenu.svg
 
 .PHONY: all options clean install uninstall pinentry

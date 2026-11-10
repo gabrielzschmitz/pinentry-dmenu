@@ -19,6 +19,7 @@ pkgs.mkShell {
     libX11
     libXinerama
     libXft
+    imlib2
     libconfig
     libassuan
     gpgme

@@ -172,7 +172,8 @@ appear only when GPG supplies matching button options. Keyboard actions remain
 available without configured button labels. Mouse hover selects actions;
 left-click activates them, middle-click pastes selection, and right-click
 cancels. `SETKEYINFO`, `GETINFO`, and `CLEARPASSPHRASE` remain handled by
-bundled pinentry core.
+bundled pinentry core. Window title uses UTF-8 `_NET_WM_NAME`; window advertises
+the provided PNG icon through `_NET_WM_ICON`.
 
 Run `cd src && ./test 4` or `./test 5` for multiline descriptions; `./test 6`
 for custom confirmation buttons; `./test 7` for a one-button message;

@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <gpg-error.h>
+#include <Imlib2.h>
 #include <libconfig.h>
 #include <limits.h>
 #include <locale.h>
@@ -89,7 +90,7 @@ static int repeat_error_visible;
 static int buttons[3], button_count;
 static char* button_labels[3];
 static unsigned char button_accelerators[3];
-static Atom wm_protocols, wm_delete;
+static Atom wm_protocols, wm_delete, netwmname, netwmicon;
 static Atom paste_selection;
 
 static Atom clip, utf8;
@@ -334,6 +335,57 @@ static void update_quality(void) {
   if (pinentry_info->quality_bar && pinentry_info->ctx_assuan) {
     quality_value = pinentry_inq_quality(pinentry_info, pin, strlen(pin));
   }
+}
+
+static void set_window_title(void) {
+  XTextProperty property;
+  char* title = pinentry_info->title;
+
+  if (!title || !*title) title = "pinentry-dmenu";
+  if (Xutf8TextListToTextProperty(dpy, &title, 1, XUTF8StringStyle,
+                                  &property) != Success)
+    return;
+  XSetWMName(dpy, win, &property);
+  XSetTextProperty(dpy, win, &property, netwmname);
+  XStoreName(dpy, win, title);
+  XFree(property.value);
+}
+
+static void set_window_icon(void) {
+  Imlib_Image image = imlib_load_image_without_cache(ICONPATH);
+  DATA32* pixels;
+  unsigned long* icon;
+  size_t count, i;
+  int width, height;
+
+  if (!image) return;
+  imlib_context_set_image(image);
+  width = imlib_image_get_width();
+  height = imlib_image_get_height();
+  pixels = imlib_image_get_data_for_reading_only();
+  if (width <= 0 || height <= 0 || !pixels ||
+      (size_t)width > (SIZE_MAX - 2) / (size_t)height) {
+    imlib_free_image();
+    return;
+  }
+
+  count = (size_t)width * (size_t)height;
+  if (count > INT_MAX - 2) {
+    imlib_free_image();
+    return;
+  }
+  icon = ecalloc(count + 2, sizeof(*icon));
+  icon[0] = width;
+  icon[1] = height;
+  if (imlib_image_has_alpha()) {
+    for (i = 0; i < count; i++) icon[i + 2] = pixels[i];
+  } else {
+    for (i = 0; i < count; i++) icon[i + 2] = pixels[i] | 0xff000000;
+  }
+  XChangeProperty(dpy, win, netwmicon, XA_CARDINAL, 32, PropModeReplace,
+                  (unsigned char*)icon, (int)(count + 2));
+  free(icon);
+  imlib_free_image();
 }
 
 static void grabfocus(void) {
@@ -718,8 +770,10 @@ static void setup(void) {
   win = XCreateWindow(dpy, parentwin, x, y, mw, mh, 0, CopyFromParent,
                       CopyFromParent, CopyFromParent,
                       CWOverrideRedirect | CWBackPixel | CWEventMask, &swa);
-  XStoreName(dpy, win,
-             pinentry_info->title ? pinentry_info->title : "pinentry-dmenu");
+  netwmname = XInternAtom(dpy, "_NET_WM_NAME", False);
+  netwmicon = XInternAtom(dpy, "_NET_WM_ICON", False);
+  set_window_title();
+  set_window_icon();
   wm_protocols = XInternAtom(dpy, "WM_PROTOCOLS", False);
   wm_delete = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
   XSetWMProtocols(dpy, win, &wm_delete, 1);
