@@ -67,6 +67,8 @@ static int screen;
 static int font_configured;
 static int prompt_configured;
 static int menu_keyboard_grabbed;
+static int menu_focused;
+static int caret_visible = 1;
 static int lines_configured;
 static int xresources_loaded;
 static int color_configured[SchemeLast][2];
@@ -615,7 +617,8 @@ static void drawwin(void) {
     curpos = drw_fontset_getwidth(drw, censort) -
              drw_fontset_getwidth(drw, &censort[cursor * asterlen]);
 
-    if ((curpos += lrpad / 2 - 1) < leftinput) {
+    if (menu_focused && caret_visible &&
+        (curpos += lrpad / 2 - 1) < leftinput) {
       drw_setscheme(drw, scheme[SchemeNormal]);
       drw_rect(drw, x + curpos, 2 + (bh - fh) / 2, 2, fh - 4, 1, 0);
     }
@@ -1126,9 +1129,14 @@ void run(void) {
 
   while (!timed_out) {
     if (!XEventsQueued(dpy, QueuedAlready)) {
-      int rc = poll(&xfd, 1, -1);
+      int rc = poll(&xfd, 1, menu_focused ? 500 : -1);
       if (rc < 0 && errno != EINTR) {
         die("poll X connection failed: %s", strerror(errno));
+      }
+      if (rc == 0 && menu_focused) {
+        caret_visible = !caret_visible;
+        drawwin();
+        continue;
       }
       if (rc > 0) XEventsQueued(dpy, QueuedAfterReading);
       continue;
@@ -1146,8 +1154,18 @@ void run(void) {
         focusmenu();
         break;
       case LeaveNotify:
-      case FocusOut:
         releasemenu();
+        break;
+      case FocusIn:
+        menu_focused = 1;
+        caret_visible = 1;
+        drawwin();
+        break;
+      case FocusOut:
+        menu_focused = 0;
+        caret_visible = 0;
+        releasemenu();
+        drawwin();
         break;
       case MotionNotify:
         focusmenu();
