@@ -665,6 +665,7 @@ static void setup(void) {
   int x, y, i = 0, screenx, screeny, screenw, screenh;
   unsigned int du;
   XSetWindowAttributes swa;
+  XClassHint class_hint = {"pinentry-dmenu", "pinentry-dmenu"};
   XIM xim;
   Window w, dw, *dws;
   XWindowAttributes wa;
@@ -770,6 +771,7 @@ static void setup(void) {
   win = XCreateWindow(dpy, parentwin, x, y, mw, mh, 0, CopyFromParent,
                       CopyFromParent, CopyFromParent,
                       CWOverrideRedirect | CWBackPixel | CWEventMask, &swa);
+  XSetClassHint(dpy, win, &class_hint);
   netwmname = XInternAtom(dpy, "_NET_WM_NAME", False);
   netwmicon = XInternAtom(dpy, "_NET_WM_ICON", False);
   set_window_title();

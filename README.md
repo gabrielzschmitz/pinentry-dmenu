@@ -172,13 +172,14 @@ appear only when GPG supplies matching button options. Keyboard actions remain
 available without configured button labels. Mouse hover selects actions;
 left-click activates them, middle-click pastes selection, and right-click
 cancels. `SETKEYINFO`, `GETINFO`, and `CLEARPASSPHRASE` remain handled by
-bundled pinentry core. Window title uses UTF-8 `_NET_WM_NAME`; window advertises
-the provided PNG icon through `_NET_WM_ICON`.
+bundled pinentry core. Window title uses UTF-8 `_NET_WM_NAME`; window
+advertises the provided PNG icon through `_NET_WM_ICON`. Both WM_CLASS instance
+and class are `pinentry-dmenu` for compositor rules such as picom opacity.
 
 Run `cd src && ./test 4` or `./test 5` for multiline descriptions; `./test 6`
-for custom confirmation buttons; `./test 7` for a one-button message;
-`./test 8` for an error; `./test 9` for timeout; `./test 10` for repeated
-entry; `./test 11` for empty cache-clear arguments; or `./test 12` for escaped
+for custom confirmation buttons; `./test 7` for a one-button message; `./test 8`
+for an error; `./test 9` for timeout; `./test 10` for repeated entry;
+`./test 11` for empty cache-clear arguments; or `./test 12` for escaped
 button-label underscores.
 
 ## License
